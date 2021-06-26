@@ -89,7 +89,7 @@ def get_disk_hour(machine, pricelist):
   return total
 
 def reset():
-  global memory_used, disk_used, disk_reads, disk_writes, last_time
+  global memory_used, disk_used, last_time
 
   # Explicitly reset the CPU counter, because the first call of this method always reports 0
   ps.cpu_percent()
@@ -97,8 +97,6 @@ def reset():
   memory_used = 0
 
   disk_used = 0
-  disk_reads = disk_io('read_count')
-  disk_writes = disk_io('write_count')
 
   last_time = time()
 
@@ -118,9 +116,6 @@ def disk_usage(param):
     lambda usage, mount: usage + getattr(ps.disk_usage(mount), param),
     DISK_MOUNTS, 0,
   )
-
-def disk_io(param):
-  return getattr(ps.disk_io_counters(), param)
 
 def format_gb(value_bytes):
   return '%.1f' % round(value_bytes / 2**30, 1)
@@ -170,8 +165,6 @@ def report():
     get_time_series(CPU_UTILIZATION_METRIC, { 'double_value': ps.cpu_percent() }),
     get_time_series(MEMORY_UTILIZATION_METRIC, { 'double_value': memory_used / MEMORY_SIZE * 100 }),
     get_time_series(DISK_UTILIZATION_METRIC, { 'double_value': disk_used / DISK_SIZE * 100 }),
-    get_time_series(DISK_READS_METRIC, { 'double_value': (disk_io('read_count') - disk_reads) / time_delta }),
-    get_time_series(DISK_WRITES_METRIC, { 'double_value': (disk_io('write_count') - disk_writes) / time_delta }),
     get_time_series(COST_ESTIMATE_METRIC, { 'double_value': (time() - ps.boot_time()) * COST_PER_SEC }),
   ])
 
@@ -258,16 +251,6 @@ MEMORY_UTILIZATION_METRIC = get_metric(
 DISK_UTILIZATION_METRIC = get_metric(
   'disk_utilization', 'DOUBLE', '%',
   '% of disk utilized in a Cromwell task call',
-)
-
-DISK_READS_METRIC = get_metric(
-  'disk_reads', 'DOUBLE', '{reads}/s',
-  'Disk read IOPS in a Cromwell task call',
-)
-
-DISK_WRITES_METRIC = get_metric(
-  'disk_writes', 'DOUBLE', '{writes}/s',
-  'Disk write IOPS in a Cromwell task call',
 )
 
 COST_ESTIMATE_METRIC = get_metric(
